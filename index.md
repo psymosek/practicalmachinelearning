@@ -1,30 +1,17 @@
-# Untitled
+# Machine Learning-Based Estimation of Weight Lifting Exercise Form
 Peter F. Symosek  
-September 28, 2016  
+October 03, 2016  
 
 
 
 ## Executive Summary
-Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+Traditional ergonomic measurement systems such as the Nike FuelBand, the Garmin Vivofit or the Fitbit are efficient at distinguishing generic levels of activity such as active vs. inactive or jogging vs. walking, but have not been utilized to qualitatively estimate the form of those activities. The Pontifical Catholic University of Rio de Janeiro is carrying out research for the effectiveness of these devices for qualitative estimation of exercise form [1]. In this project, the researchers deployed accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. The purpose of this report is to estimate how well a standard machine learning algorithm can distinguish between the forms.
 
-Weight Lifting Exercises Dataset
+Six young health participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E). Class A corresponds to the specified execution of the exercise, while the other 4 classes correspond to common mistakes [2]. 
 
+## Data Analysis
 
-On-body sensing schema
-
-
-
-
-This human activity recognition research has traditionally focused on discriminating between different activities, i.e. to predict "which" activity was performed at a specific point in time (like with the Daily Living Activities dataset above). The approach we propose for the Weight Lifting Exercises dataset is to investigate "how (well)" an activity was performed by the wearer. The "how (well)" investigation has only received little attention so far, even though it potentially provides useful information for a large variety of applications,such as sports training.
-
-In this work (see the paper) we first define quality of execution and investigate three aspects that pertain to qualitative activity recognition: the problem of specifying correct execution, the automatic and robust detection of execution mistakes, and how to provide feedback on the quality of execution to the user. We tried out an on-body sensing approach (dataset here), but also an "ambient sensing approach" (by using Microsoft Kinect - dataset still unavailable)
-
-Six young health participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E).
-
-Class A corresponds to the specified execution of the exercise, while the other 4 classes correspond to common mistakes. Participants were supervised by an experienced weight lifter to make sure the execution complied to the manner they were supposed to simulate. The exercises were performed by six male participants aged between 20-28 years, with little weight lifting experience. We made sure that all participants could easily simulate the mistakes in a safe and controlled manner by using a relatively light dumbbell (1.25kg).
-
-The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
-
+The Weight Lifting Exercise dataset is derived from the public domain dataset stored at the webpage http://groupware.les.inf.puc-rio.br/har. The dataset is retrived and checked for tidyness. A repid scan of the first few elements of the training data demonstrates that there are several variables which are primarily comprised of NA's. A helper routine, delete_na.R, was written to delete the bad data. The first seven columns of the training data are discarded as well because they have no relevance for HAR. The first seven and last columns of the testing data are discarded as well. After reducing the datasets to variables that are relevant to classification of the exercise form, there are 86 columns for the training data and 52 columns for the testing data.
 
 ```r
 trainfileURL<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
@@ -32,7 +19,7 @@ testfileURL<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.cs
 training<-read.csv(trainfileURL)
 testing<-read.csv(testfileURL)
 ```
-## Data Analysis
+
 
 ```r
 str(training,vec.len=1,list.len=20)
@@ -91,6 +78,8 @@ str(testing,vec.len=1,list.len=20)
 ##  $ max_yaw_belt            : logi  NA ...
 ##   [list output truncated]
 ```
+
+Because the ultimate objective of training is to classify the samples of the testing dataset with high accuracy, the training dataset variables are restricted to those variables that exist in the testing data. A utility function, calculate_both.R, is written to accomplish this. The category identification variable, "classe", of the training dataset is concatenated to the right side of the data frame after downselection to the variables that are found in both the training and the testing datasets. After this calculation, there are 53 columns in the resultant dataset (all of the testing dataset variables occurred in the training dataset).
 
 ```r
 delete_na <- function (df) {
@@ -165,6 +154,10 @@ dim(trainsubr)
 ## [1] 19622    53
 ```
 
+Velloso, et al [2] used a Random Forest classifier to attain a 98.2% correct classification rate. The authors also used "bagging" or bootstrap aggregating to augment the performance of a single Random Forest classifier, where bootstrap aggregating averages together the classification decisions of an array of weak classifiers to obtain a more robust classifier. Stochastic Gradient Boosting can also be used to improve the performance of individual tree classifiers where boosting calculates a weighted average of the classication decisions of an array of weak classifiers to obtain a better classifier. The weights of the weighted average are derived using optimal estimators [3]. 
+
+The training dataset after downselection is partitioned into a training subset and a testing subset with the createDataPartition routine of the caret library. The subsets are selected with the training subset percentage = 75% and the testing subset percentage = 25%. The Gradient Boosting Model (gbm) classifier is trained using the train routine of the caret library. Training is carried out with cross validation with 10 folds. The training is configured to execute in parallel using the parallel and doParallel libraries. The learning rate (shrinkage) is 0.05. The maximum depth of interactions (interaction.depth) is identified as a grid of seq(3,27,4) variable interactions. The total number of trees to fit (n.trees) is defined as a grid of seq(1,1001,100). This is equivalent to the number of iterations and the number of basis functions in the additive expansion. The minimum number of observations in the trees' terminal nodes (n.minobsinnode) is specified to be 15.
+
 ```r
 library(caret)
 set.seed(95014)
@@ -192,6 +185,9 @@ plot(fitgbm)
 ```
 
 ![](index_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
+
+Figure 1. Classification Accuracy for Stochastic Gradient Boosting
+
 
 ```r
 fitgbm$finalModel
@@ -249,17 +245,57 @@ confusionMatrix(predict(fitgbm,testdata[,-53]),testdata$classe)
 ## Detection Prevalence   0.2849   0.1925   0.1750   0.1646   0.1831
 ## Balanced Accuracy      0.9992   0.9961   0.9975   0.9981   0.9983
 ```
+The trained classifier's performance as a function of the total number of trees and interaction depth is shown in Figure 1. For interaction depths greater than or equal to seven and the number of trees greater than 400, the classifier's accuracy is 99% or greater. The best configuration is number of trees = 801 and interaction depth = 19. The importance of the training variables is shown in Figure 2.
 
 ```r
 plot(varImp(fitgbm),top=35)
 ```
 
-![](index_files/figure-html/unnamed-chunk-6-1.png)<!-- -->
+![](index_files/figure-html/unnamed-chunk-7-1.png)<!-- -->
+
+Figure 2. Variable Importance for Stochastic Gradient Boosting
+
+The estimated exercise categories for the testing dataset are shown in Table 1.
+
 
 ```r
-save(fitgbm,file='fitgbm.Rdata')
+data.frame(problem_id=testing$problem_id,classe=predict(fitgbm,testsub[,-53]))
 ```
 
-## Conclusions
-Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
+```
+##    problem_id classe
+## 1           1      2
+## 2           2      1
+## 3           3      2
+## 4           4      1
+## 5           5      1
+## 6           6      5
+## 7           7      4
+## 8           8      2
+## 9           9      1
+## 10         10      1
+## 11         11      2
+## 12         12      3
+## 13         13      2
+## 14         14      1
+## 15         15      5
+## 16         16      5
+## 17         17      1
+## 18         18      2
+## 19         19      2
+## 20         20      2
+```
+Table 1. Testing Dataset Categories
 
+## Conclusions
+
+The cross-validation classification rate of the Gradient Boosting Model is 99.67%. This improvement is attained by use of a significantly more complex classifier which required several hours of training time on a laptop computer.
+
+
+## Bibliography
+
+1. Human Activity Recognition, http://groupware.les.inf.puc-rio.br/har, retrieved 10/03/2016
+
+2. Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
+
+3. Package 'gbm', https://cran.r-project.org/web/packages/gbm/gbm.pdf, retrieved 10/03/2016
